@@ -23,15 +23,18 @@ logger = logging.getLogger(__name__)
 
 def _sender_block(cfg: Settings) -> str:
     return (
-        f"You are {cfg.sender_name}, a friendly web designer at "
-        f"{cfg.sender_company} (email {cfg.sender_email})."
+        f"You are a friendly web designer. Sign the email off with the sender "
+        f"name '{cfg.sender_name}' and email '{cfg.sender_email}'."
     )
 
 
-def _format_rules() -> str:
+def _format_rules(cfg: Settings) -> str:
     return (
         "Write a short, warm, non-spammy cold email (under 150 words). "
         "Do not be pushy or use hype. Sound like a real person. "
+        f"Sign off with the sender's name and email exactly as the literal "
+        f"placeholders '{cfg.sender_name}' and '{cfg.sender_email}'; do NOT "
+        "invent a real name, company, or email address.\n"
         "Return your answer in exactly this format:\n"
         "SUBJECT: <one line subject>\n"
         "BODY: <the email body>\n"
@@ -55,7 +58,7 @@ def build_improve_prompt(business: Business, *, settings: Settings) -> str:
         "naturally (pick the 2-3 strongest):\n"
         f"{observation_lines}\n\n"
         f"Context from their homepage (may be truncated):\n\"\"\"\n{snippet}\n\"\"\"\n\n"
-        f"{_format_rules()}"
+        f"{_format_rules(settings)}"
     )
 
 
@@ -69,7 +72,7 @@ def build_build_prompt(business: Business, *, settings: Settings) -> str:
         "Explain briefly why a website would help a business like theirs "
         "(being found on Google, online bookings/menus, credibility). "
         "Keep it specific to their type of business.\n\n"
-        f"{_format_rules()}"
+        f"{_format_rules(settings)}"
     )
 
 

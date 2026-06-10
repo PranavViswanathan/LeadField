@@ -308,19 +308,103 @@ function setStatus(text, ok) {
   $(".pulse").style.background = ok ? "var(--mint)" : "var(--ember)";
 }
 
+/* ---------- data refresh (boot + after a live run) ---------- */
+async function refreshData({ syncLocationInput = false } = {}) {
+  const [stats, leads] = await Promise.all([
+    getJSON("/api/stats"),
+    getJSON("/api/leads"),
+  ]);
+  renderStats(stats);
+  state.leads = leads;
+  buildFilters(leads);
+  applyFilters();
+  setStatus(leads.length ? `${leads.length} leads live` : "no data yet", true);
+  if (syncLocationInput && stats.location) {
+    $("#runLocation").value = stats.location;
+  }
+}
+
+/* ---------- live run console ---------- */
+const runForm = $("#runForm");
+const runBtn = $("#runBtn");
+const runStatus = $("#runStatus");
+const runStatusText = $("#runStatusText");
+const runBarFill = $("#runBarFill");
+let pollTimer = null;
+
+function setRunStatus(text, kind) {
+  runStatus.hidden = false;
+  runStatusText.textContent = text;
+  runStatusText.className = `console-status-text${kind ? " " + kind : ""}`;
+}
+
+function setBar(processed, total) {
+  if (total > 0) {
+    runBarFill.classList.remove("indeterminate");
+    runBarFill.style.width = `${Math.round((processed / total) * 100)}%`;
+  } else {
+    runBarFill.classList.add("indeterminate");
+  }
+}
+
+async function pollRun() {
+  let job;
+  try {
+    job = await getJSON("/api/run/status");
+  } catch {
+    return;
+  }
+  setBar(job.processed, job.total);
+  if (job.status === "running") {
+    const suffix = job.total ? ` (${job.processed}/${job.total})` : "";
+    setRunStatus(`${job.message}${suffix}`, null);
+    return;
+  }
+  clearInterval(pollTimer);
+  pollTimer = null;
+  runBtn.disabled = false;
+  runBtn.textContent = "Run live scan";
+  if (job.status === "error") {
+    setRunStatus(`Scan failed: ${job.error}`, "error");
+    return;
+  }
+  const n = job.result ? job.result.emails : 0;
+  setBar(1, 1);
+  setRunStatus(`Done. ${n} fresh leads loaded.`, "ok");
+  await refreshData();
+}
+
+runForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (pollTimer) return;
+  const location = $("#runLocation").value.trim();
+  if (!location) return;
+  const limit = parseInt($("#runLimit").value, 10);
+
+  runBtn.disabled = true;
+  runBtn.textContent = "Scanning…";
+  setBar(0, 0);
+  setRunStatus("Dispatching scan…", null);
+  try {
+    await fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ location, limit, reset: true }),
+    });
+    pollTimer = setInterval(pollRun, 1200);
+    pollRun();
+  } catch (err) {
+    runBtn.disabled = false;
+    runBtn.textContent = "Run live scan";
+    setRunStatus(`Could not start scan: ${err}`, "error");
+  }
+});
+
 /* ---------- boot ---------- */
 async function boot() {
   observeReveals();
   try {
-    const [stats, leads] = await Promise.all([
-      getJSON("/api/stats"),
-      getJSON("/api/leads"),
-    ]);
-    renderStats(stats);
-    state.leads = leads;
-    buildFilters(leads);
-    applyFilters();
-    setStatus(leads.length ? `${leads.length} leads live` : "no data yet", true);
+    await refreshData({ syncLocationInput: true });
   } catch (err) {
     console.error(err);
     setStatus("offline", false);

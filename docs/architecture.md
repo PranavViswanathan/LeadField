@@ -15,7 +15,7 @@ flowchart TB
     end
 
     subgraph tasks[tasks/ - pipeline modules]
-        SEARCH["search.py<br/>Google discovery"]
+        SEARCH["search.py<br/>OSM/web discovery"]
         CLUSTER["cluster.py<br/>type clustering"]
         WEB["website_checker.py<br/>fetch + audit"]
         EMAIL["email_generator.py<br/>cold email drafting"]
@@ -37,7 +37,7 @@ flowchart TB
 
     DB[("leads.db<br/>SQLite")]
     LLM["Ollama<br/>llama3.2"]
-    GOOGLE["Google Search"]
+    GOOGLE["OpenStreetMap /<br/>DuckDuckGo / Google"]
 
     CONFIG -.reads.-> tasks
     SEARCH --> GOOGLE

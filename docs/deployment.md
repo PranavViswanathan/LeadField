@@ -86,7 +86,8 @@ All settings live in `config.py` and are overridable via environment variables
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `LEADGEN_LOCATION` | `Austin, TX` | location appended to queries |
+| `LEADGEN_LOCATION` | `Boston, MA` | location appended to queries |
+| `LEADGEN_SEARCH_BACKEND` | `duckduckgo` | `duckduckgo` (keyless) or `google` |
 | `LEADGEN_RESULTS_PER_CATEGORY` | `10` | search results per category |
 | `LEADGEN_SEARCH_DELAY_SECONDS` | `2.5` | delay between queries |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API base |

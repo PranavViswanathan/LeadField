@@ -84,6 +84,20 @@ LLM references in the email:
 - no recent copyright year
 - no images detected
 
+## Search backends
+
+`search.py` supports three discovery backends, selected by
+`LEADGEN_SEARCH_BACKEND`:
+
+| Backend | Source | Notes |
+|---------|--------|-------|
+| `overpass` (default) | OpenStreetMap via Overpass | Real business entities; many have no `website` tag, which become "build a site" leads. Geocodes the location with Nominatim, then queries OSM tags mapped from each category. |
+| `duckduckgo` | DuckDuckGo HTML endpoint | Keyless web search; returns roundup/listicle pages as often as individual sites. |
+| `google` | googlesearch-python | Often returns nothing now (Google serves a JavaScript-gated page to scrapers). |
+
+All backends return the same `Business` shape, so the rest of the pipeline is
+identical regardless of source.
+
 ## Clustering
 
 `cluster.classify` scores each business against a keyword map and assigns the

@@ -64,6 +64,35 @@
         <a class="btn" href="#dossier">Open the dossier</a>
         <a class="btn ghost" href="#scan">See the scan</a>
       </div>
+
+      <form class="console reveal" data-d="6" id="runForm">
+        <div class="console-row">
+          <div class="console-field grow">
+            <label for="runLocation">target location</label>
+            <input
+              id="runLocation"
+              name="location"
+              value="Boston, MA"
+              placeholder="City, ST"
+              autocomplete="off"
+            />
+          </div>
+          <div class="console-field">
+            <label for="runLimit">max leads</label>
+            <select id="runLimit">
+              <option value="6">6</option>
+              <option value="12" selected>12</option>
+              <option value="20">20</option>
+              <option value="40">40</option>
+            </select>
+          </div>
+          <button class="btn" type="submit" id="runBtn">Run live scan</button>
+        </div>
+        <div class="console-status" id="runStatus" hidden>
+          <div class="console-bar"><div class="console-bar-fill" id="runBarFill"></div></div>
+          <span id="runStatusText" class="console-status-text"></span>
+        </div>
+      </form>
     </div>
     <a class="scroll-cue" href="#scan" aria-label="scroll">
       <span></span>scroll

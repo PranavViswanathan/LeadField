@@ -37,8 +37,39 @@ flowchart LR
 |----------|---------|
 | `GET /api/stats` | totals, location, per-category counts, models used |
 | `GET /api/leads` | every email joined with its business context + observations |
+| `POST /api/run` | start a pipeline run for a location (background job) |
+| `GET /api/run/status` | poll the current run's stage/progress |
 | `GET /` | the dashboard shell |
 | `GET /api/docs` | FastAPI interactive docs |
+
+## Live scan from the UI
+
+The hero includes a control deck: enter a location, pick a max-leads cap, and
+press **Run live scan**. The dashboard `POST`s to `/api/run`, which launches the
+pipeline in a background thread, then polls `/api/run/status` every ~1.2s to show
+the live stage (`search -> audit -> draft -> done`) and a progress bar. On
+completion it refetches `/api/stats` and `/api/leads` and re-renders everything
+in place, with no page reload.
+
+```mermaid
+sequenceDiagram
+    participant UI as Dashboard
+    participant API as webapp/server.py
+    participant P as pipeline.run_pipeline
+    UI->>API: POST /api/run {location, limit, reset}
+    API->>P: start background thread
+    API-->>UI: {status: running}
+    loop every 1.2s
+        UI->>API: GET /api/run/status
+        API-->>UI: {stage, processed, total}
+    end
+    P-->>API: done (counts)
+    UI->>API: GET /api/stats + /api/leads
+    UI->>UI: re-render dashboard
+```
+
+A run with `reset: true` clears prior results first, so switching location gives
+a clean dossier for the new city.
 
 ## Design notes
 

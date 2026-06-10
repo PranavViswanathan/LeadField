@@ -32,8 +32,20 @@ class Settings(BaseSettings):
 
     # --- Search configuration -------------------------------------------------
     location: str = Field(
-        default="Austin, TX",
+        default="Boston, MA",
         description="Geographic location appended to every search query.",
+    )
+    search_backend: str = Field(
+        default="overpass",
+        description=(
+            "Discovery provider: 'overpass' (OpenStreetMap, real businesses), "
+            "'duckduckgo' (keyless web search), or 'google'."
+        ),
+    )
+    overpass_timeout_seconds: float = Field(
+        default=45.0,
+        gt=0.0,
+        description="Timeout for OpenStreetMap Overpass queries (can be slow).",
     )
     categories: list[str] = Field(
         default_factory=lambda: [
@@ -103,9 +115,11 @@ class Settings(BaseSettings):
     )
 
     # --- Sender identity (used to personalize cold emails) --------------------
-    sender_name: str = Field(default="Alex Rivera")
-    sender_company: str = Field(default="Pixel & Pulse Web Studio")
-    sender_email: str = Field(default="alex@pixelpulse.studio")
+    # Defaults are fill-in placeholders, kept literally in the generated email so
+    # the user can substitute their own details before sending.
+    sender_name: str = Field(default="[name]")
+    sender_company: str = Field(default="[company]")
+    sender_email: str = Field(default="[email]")
 
     def search_queries(self) -> list[tuple[str, str]]:
         """Build ``(category, query_string)`` pairs for every category.

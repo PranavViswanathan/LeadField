@@ -177,6 +177,48 @@ section { position: relative; z-index: 2; padding: clamp(80px, 12vh, 150px) clam
 }
 .btn.ghost:hover { border-color: var(--amber); color: var(--amber); transform: translateY(-3px); }
 
+/* scan console */
+.console {
+  margin-top: 36px; max-width: 640px;
+  background: rgba(18,24,31,0.7); backdrop-filter: blur(10px);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; position: relative; z-index: 3;
+}
+.console-row { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+.console-field { display: flex; flex-direction: column; gap: 7px; }
+.console-field.grow { flex: 1; min-width: 160px; }
+.console-field label {
+  font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--paper-faint);
+}
+.console-field input, .console-field select {
+  background: var(--ink); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; color: var(--paper); font-family: var(--font-mono);
+  font-size: 0.85rem; transition: border-color 0.3s var(--ease);
+}
+.console-field input:focus, .console-field select:focus {
+  outline: none; border-color: var(--amber);
+}
+.console .btn { padding: 13px 22px; }
+.console .btn[disabled] { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.console-status { margin-top: 16px; display: flex; flex-direction: column; gap: 9px; }
+.console-bar { height: 4px; background: var(--ink); border-radius: 100px; overflow: hidden; }
+.console-bar-fill {
+  height: 100%; width: 0; border-radius: 100px;
+  background: linear-gradient(90deg, var(--amber), var(--ember));
+  transition: width 0.5s var(--ease);
+}
+.console-bar-fill.indeterminate {
+  width: 35% !important; animation: indet 1.3s var(--ease) infinite;
+}
+@keyframes indet { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }
+.console-status-text {
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em;
+  color: var(--paper-dim);
+}
+.console-status-text.error { color: var(--ember); }
+.console-status-text.ok { color: var(--mint); }
+
 /* radar motif */
 .radar {
   position: absolute; top: 50%; right: -10%; transform: translateY(-50%);

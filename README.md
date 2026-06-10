@@ -4,8 +4,10 @@
 > presence, and draft a personalized cold email for every one - then explore it
 > all in an animated dashboard.
 
-No API keys. Search runs through `googlesearch-python`; every email is written
-locally by [Ollama](https://ollama.com).
+No API keys. Discovery uses OpenStreetMap (Overpass) to find real local
+businesses, with DuckDuckGo and Google as alternative web-search backends; every
+email is written locally by [Ollama](https://ollama.com). You can trigger a scan
+for any location straight from the dashboard and watch it populate live.
 
 ```
 search -> cluster -> audit -> draft -> store -> export

@@ -137,6 +137,16 @@ def save_emails(emails: list[Email], *, settings: Settings | None = None) -> int
     return len(emails)
 
 
+def clear_all(settings: Settings | None = None) -> None:
+    """Delete all rows from both tables (used for a fresh location switch)."""
+    cfg = settings or get_settings()
+    init_db(cfg)
+    with _connect(cfg.database_path) as connection:
+        connection.execute("DELETE FROM emails")
+        connection.execute("DELETE FROM businesses")
+    logger.info("Cleared businesses and emails tables")
+
+
 def fetch_emails(settings: Settings | None = None) -> list[dict[str, object]]:
     """Return all stored emails as a list of dicts (newest first)."""
     cfg = settings or get_settings()
