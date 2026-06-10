@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEADFIELD // local business intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,400..600&family=Hanken+Grotesk:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <!-- scroll progress -->
+  <div class="scroll-progress" id="scrollProgress"></div>
+
+  <!-- grain + atmosphere -->
+  <div class="grain" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <!-- nav -->
+  <header class="nav" id="nav">
+    <a class="brand" href="#top">
+      <span class="brand-mark">◬</span>
+      <span class="brand-text">LEADFIELD</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#scan">Scan</a>
+      <a href="#gap">The Gap</a>
+      <a href="#signal">Signal</a>
+      <a href="#dossier">Dossier</a>
+    </nav>
+    <div class="nav-status" id="navStatus">
+      <span class="pulse"></span><span id="navStatusText">connecting</span>
+    </div>
+  </header>
+
+  <!-- hero -->
+  <section class="hero" id="top">
+    <div class="radar" aria-hidden="true">
+      <div class="radar-ring"></div>
+      <div class="radar-ring"></div>
+      <div class="radar-ring"></div>
+      <div class="radar-sweep"></div>
+    </div>
+    <div class="hero-inner">
+      <p class="eyebrow reveal">
+        <span class="tick">▚</span> field report
+        <span id="heroLocation">· loading region ·</span>
+      </p>
+      <h1 class="hero-title">
+        <span class="line reveal" data-d="0">We find the</span>
+        <span class="line reveal" data-d="1">businesses the</span>
+        <span class="line reveal accent" data-d="2">internet forgot</span>
+        <span class="line reveal" data-d="3">then write to them.</span>
+      </h1>
+      <p class="hero-sub reveal" data-d="4">
+        An autonomous pipeline scouts local businesses, audits their web
+        presence, and drafts a personal cold email for every single one.
+      </p>
+      <div class="hero-cta reveal" data-d="5">
+        <a class="btn" href="#dossier">Open the dossier</a>
+        <a class="btn ghost" href="#scan">See the scan</a>
+      </div>
+    </div>
+    <a class="scroll-cue" href="#scan" aria-label="scroll">
+      <span></span>scroll
+    </a>
+  </section>
+
+  <!-- stat band -->
+  <section class="band" id="scan">
+    <div class="section-head reveal">
+      <span class="kicker">01 / the scan</span>
+      <h2>Every lead, counted.</h2>
+    </div>
+    <div class="stats" id="stats">
+      <div class="stat reveal" data-d="0">
+        <div class="stat-num" data-count="0" data-key="total_businesses">0</div>
+        <div class="stat-label">businesses scanned</div>
+      </div>
+      <div class="stat reveal" data-d="1">
+        <div class="stat-num" data-count="0" data-key="with_website">0</div>
+        <div class="stat-label">sites audited</div>
+      </div>
+      <div class="stat reveal accent-stat" data-d="2">
+        <div class="stat-num" data-count="0" data-key="without_website">0</div>
+        <div class="stat-label">gaps found · no site</div>
+      </div>
+      <div class="stat reveal" data-d="3">
+        <div class="stat-num" data-count="0" data-key="total_emails">0</div>
+        <div class="stat-label">emails drafted</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- the gap -->
+  <section class="gap" id="gap">
+    <div class="section-head reveal">
+      <span class="kicker">02 / the gap</span>
+      <h2>Two kinds of opportunity.</h2>
+      <p class="lead-copy">
+        Businesses already online get a sharper redesign pitch. The ones with no
+        website at all are the real prize: a clean slate.
+      </p>
+    </div>
+    <div class="gap-bar reveal">
+      <div class="gap-seg has" id="gapHas">
+        <span class="gap-seg-label">has a website</span>
+        <span class="gap-seg-val" id="gapHasVal">0</span>
+      </div>
+      <div class="gap-seg none" id="gapNone">
+        <span class="gap-seg-label">no website</span>
+        <span class="gap-seg-val" id="gapNoneVal">0</span>
+      </div>
+    </div>
+    <div class="gap-legend reveal">
+      <span><i class="dot has"></i> improve their existing site</span>
+      <span><i class="dot none"></i> build a new site from scratch</span>
+    </div>
+  </section>
+
+  <!-- category signal -->
+  <section class="signal" id="signal">
+    <div class="section-head reveal">
+      <span class="kicker">03 / signal</span>
+      <h2>By business type.</h2>
+    </div>
+    <div class="signal-bars" id="signalBars"></div>
+  </section>
+
+  <!-- dossier -->
+  <section class="dossier" id="dossier">
+    <div class="section-head reveal">
+      <span class="kicker">04 / the dossier</span>
+      <h2>Drafted &amp; ready to send.</h2>
+    </div>
+
+    <div class="dossier-controls reveal">
+      <div class="search-wrap">
+        <input
+          type="search"
+          id="search"
+          placeholder="search a business, category, subject…"
+          autocomplete="off"
+        />
+      </div>
+      <div class="filters" id="filters"></div>
+    </div>
+
+    <div class="cards" id="cards"></div>
+    <div class="empty" id="empty" hidden>
+      <h3>No leads yet.</h3>
+      <p>
+        Run the pipeline to populate the dossier:
+        <code>make run</code> &nbsp;or&nbsp; <code>python run_local.py</code>
+      </p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-inner reveal">
+      <span class="brand-mark">◬</span>
+      <p>LEADFIELD · local business intelligence pipeline.</p>
+      <p class="muted">
+        Search · Cluster · Audit · Draft · Export &nbsp;|&nbsp; powered by Ollama
+      </p>
+    </div>
+  </footer>
+
+  <!-- detail panel -->
+  <div class="panel-overlay" id="overlay" hidden></div>
+  <aside class="panel" id="panel" hidden aria-modal="true" role="dialog">
+    <button class="panel-close" id="panelClose" aria-label="close">✕</button>
+    <div class="panel-body" id="panelBody"></div>
+  </aside>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

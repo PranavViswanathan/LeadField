@@ -1,0 +1,14 @@
+# Application dependencies for the lead generation pipeline.
+# These are installed both locally (for run_local.py) and into the Airflow
+# containers via _PIP_ADDITIONAL_REQUIREMENTS in docker-compose.yml.
+googlesearch-python>=1.2.5
+httpx>=0.27.0
+beautifulsoup4>=4.12.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+tenacity>=8.2.0
+
+# Web dashboard (only used by `make ui` / webapp.server; the Airflow image does
+# not install these).
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0

@@ -1,0 +1,100 @@
+# Local Airflow (LocalExecutor) + Postgres for the lead generation pipeline.
+#
+# The Ollama server runs on the host, so containers reach it via
+# host.docker.internal. App dependencies are injected with
+# _PIP_ADDITIONAL_REQUIREMENTS so we do not need a custom image for the demo.
+#
+# Start:   docker compose up -d
+# UI:      http://localhost:8080  (user: airflow / pass: airflow)
+# Stop:    docker compose down
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.3-python3.11
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    # Reach the host's Ollama from inside the container.
+    OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+    # Persist the SQLite DB under the mounted /opt/airflow/data dir.
+    LEADGEN_DATABASE_PATH: "/opt/airflow/data/leads.db"
+    _PIP_ADDITIONAL_REQUIREMENTS: >-
+      googlesearch-python>=1.2.5 httpx>=0.27.0 beautifulsoup4>=4.12.0
+      pydantic>=2.6.0 pydantic-settings>=2.2.0 tenacity>=8.2.0
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./tasks:/opt/airflow/tasks
+    - ./config.py:/opt/airflow/config.py
+    - ./export.py:/opt/airflow/export.py
+    - ./data:/opt/airflow/data
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+  user: "${AIRFLOW_UID:-50000}:0"
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  depends_on: &airflow-common-depends-on
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create \
+          --username airflow --password airflow \
+          --firstname Lead --lastname Gen \
+          --role Admin --email admin@example.com || true
+    restart: on-failure
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-db-volume:
