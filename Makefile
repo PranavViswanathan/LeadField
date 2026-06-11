@@ -91,8 +91,12 @@ emails: ## Print all stored emails (subject + type)
 # ---------------------------------------------------------------------------
 # Web UI
 # ---------------------------------------------------------------------------
+.PHONY: kill-port
+kill-port: ## Kill any process on UI_PORT
+	-lsof -ti :$(UI_PORT) | xargs kill -9 2>/dev/null || true
+
 .PHONY: ui
-ui: ## Serve the dashboard at http://localhost:$(UI_PORT)
+ui: kill-port ## Serve the dashboard at http://localhost:$(UI_PORT)
 	$(PY) -m uvicorn webapp.server:app --host 0.0.0.0 --port $(UI_PORT) --reload
 
 # ---------------------------------------------------------------------------
