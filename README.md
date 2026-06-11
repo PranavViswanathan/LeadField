@@ -9,6 +9,19 @@ businesses, with DuckDuckGo and Google as alternative web-search backends; every
 email is written locally by [Ollama](https://ollama.com). You can trigger a scan
 for any location straight from the dashboard and watch it populate live.
 
+<img width="2024" height="1084" alt="image" src="https://github.com/user-attachments/assets/b37b45e8-78d7-458b-94fd-31413c27fc27" />
+
+<img width="1892" height="504" alt="image" src="https://github.com/user-attachments/assets/3ef2f6b8-7604-414a-804f-af5d431bf978" />
+
+
+<img width="1596" height="533" alt="image" src="https://github.com/user-attachments/assets/7d104ca2-4dcc-4143-808f-15ec50d9dd13" />
+
+<img width="1592" height="918" alt="image" src="https://github.com/user-attachments/assets/d08e9ade-c863-42f5-b0f9-b7ae069d5c4c" />
+
+<img width="1154" height="689" alt="image" src="https://github.com/user-attachments/assets/fdfef02f-6e3b-4d61-a764-394917cc59d2" />
+
+
+
 ```
 search -> cluster -> audit -> draft -> store -> export
 ```
