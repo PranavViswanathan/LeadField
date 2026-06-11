@@ -65,6 +65,31 @@ def test_save_emails_round_trip(tmp_settings) -> None:
     assert fetched[0]["email_type"] == "improve_site"
 
 
+def test_schedule_create_list_update_delete(tmp_settings) -> None:
+    schedule_id = storage.create_schedule(
+        locations=["Boston, MA", "Cambridge, MA"],
+        max_per_city=75,
+        mode="daily",
+        run_at=None,
+        time_of_day="08:00",
+        reset=True,
+        settings=tmp_settings,
+    )
+    schedules = storage.list_schedules(settings=tmp_settings)
+    assert len(schedules) == 1
+    assert schedules[0]["id"] == schedule_id
+    assert schedules[0]["mode"] == "daily"
+    assert schedules[0]["status"] == "pending"
+
+    storage.update_schedule(
+        schedule_id, status="done", last_run="2026-06-10T08:00:00", settings=tmp_settings
+    )
+    assert storage.list_schedules(settings=tmp_settings)[0]["status"] == "done"
+
+    storage.delete_schedule(schedule_id, settings=tmp_settings)
+    assert storage.list_schedules(settings=tmp_settings) == []
+
+
 def test_save_emails_idempotent_on_business_key(tmp_settings) -> None:
     storage.save_emails([make_email()], settings=tmp_settings)
     storage.save_emails(

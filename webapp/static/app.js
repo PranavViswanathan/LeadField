@@ -389,7 +389,7 @@ runForm.addEventListener("submit", async (e) => {
     await fetch("/api/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ location, limit, reset: true }),
+      body: JSON.stringify({ locations: [location], limit, reset: true }),
     });
     pollTimer = setInterval(pollRun, 1200);
     pollRun();
@@ -399,6 +399,395 @@ runForm.addEventListener("submit", async (e) => {
     setRunStatus(`Could not start scan: ${err}`, "error");
   }
 });
+
+/* ---------- scheduler view ---------- */
+const schedulerView = $("#schedulerView");
+const schedCities = [];
+let schedMode = "now";
+
+let schedLiveTimer = null;
+let schedLiveStatus = null;
+
+function openScheduler() {
+  schedulerView.hidden = false;
+  document.body.style.overflow = "hidden";
+  if (!schedCities.length) {
+    const loc = $("#runLocation").value.trim();
+    if (loc) schedCities.push(loc);
+  }
+  renderCityList();
+  loadSchedules();
+  updateSchedulerLive();
+  if (schedLiveTimer) clearInterval(schedLiveTimer);
+  schedLiveTimer = setInterval(updateSchedulerLive, 2000);
+}
+function closeScheduler() {
+  schedulerView.hidden = true;
+  document.body.style.overflow = "";
+  if (schedLiveTimer) {
+    clearInterval(schedLiveTimer);
+    schedLiveTimer = null;
+  }
+}
+
+function schedSubmitLabel() {
+  return schedMode === "now" ? "Run now" : "Add schedule";
+}
+
+// Drives the live "scan in progress" banner and keeps the schedule list fresh
+// while the Scheduler tab is open. Catches scheduled runs too, not just Run now.
+async function updateSchedulerLive() {
+  let job;
+  try {
+    job = await getJSON("/api/run/status");
+  } catch {
+    return;
+  }
+  const banner = $("#activeScan");
+  const bar = $("#activeScanBar");
+  if (job.status === "running") {
+    banner.hidden = false;
+    $("#activeScanText").textContent = job.message || "scan in progress…";
+    if (job.total > 0) {
+      bar.classList.remove("indeterminate");
+      bar.style.width = `${Math.round((job.processed / job.total) * 100)}%`;
+    } else {
+      bar.classList.add("indeterminate");
+    }
+    $("#schedSubmit").disabled = true;
+    $("#schedSubmit").textContent = "scan in progress…";
+    if (schedLiveStatus !== "running") loadSchedules();
+  } else {
+    banner.hidden = true;
+    $("#schedSubmit").disabled = false;
+    $("#schedSubmit").textContent = schedSubmitLabel();
+    if (schedLiveStatus === "running") {
+      // a run just finished: refresh the list and the dashboard underneath
+      loadSchedules();
+      refreshData({ syncLocationInput: true });
+    }
+  }
+  schedLiveStatus = job.status;
+}
+$("#navScheduler").addEventListener("click", openScheduler);
+$("#schedulerClose").addEventListener("click", closeScheduler);
+
+function renderCityList() {
+  $("#cityList").innerHTML = schedCities
+    .map(
+      (c, i) =>
+        `<li class="city-chip">${escapeHTML(c)}<button data-i="${i}" aria-label="remove">✕</button></li>`
+    )
+    .join("");
+  $$("#cityList .city-chip button").forEach((b) =>
+    b.addEventListener("click", () => {
+      schedCities.splice(+b.dataset.i, 1);
+      renderCityList();
+    })
+  );
+}
+
+function addCity() {
+  const value = $("#cityInput").value.trim();
+  if (value && !schedCities.includes(value)) {
+    schedCities.push(value);
+    $("#cityInput").value = "";
+    renderCityList();
+  }
+}
+$("#addCity").addEventListener("click", addCity);
+$("#cityInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    addCity();
+  }
+});
+
+$$("#modeTabs .mode-tab").forEach((tab) =>
+  tab.addEventListener("click", () => {
+    $$("#modeTabs .mode-tab").forEach((t) => t.classList.remove("active"));
+    tab.classList.add("active");
+    schedMode = tab.dataset.mode;
+    $("#onceAt").hidden = schedMode !== "once";
+    $("#dailyAt").hidden = schedMode !== "daily";
+    $("#schedSubmit").textContent = schedMode === "now" ? "Run now" : "Add schedule";
+  })
+);
+
+$("#schedSubmit").addEventListener("click", async () => {
+  if (!schedCities.length) {
+    setSchedStatus("Add at least one city first.", "error");
+    return;
+  }
+  const limit = parseInt($("#maxPerCity").value, 10) || 20;
+  const reset = $("#resetToggle").checked;
+  const locations = schedCities.slice();
+
+  if (schedMode === "now") {
+    await startSchedRun(locations, limit, reset);
+  } else if (schedMode === "once") {
+    const runAt = $("#onceAt").value;
+    if (!runAt) return setSchedStatus("Pick a date and time.", "error");
+    await createSchedule({
+      locations,
+      max_per_city: limit,
+      mode: "once",
+      run_at: runAt,
+      reset,
+    });
+  } else {
+    const timeOfDay = $("#dailyAt").value;
+    if (!timeOfDay) return setSchedStatus("Pick a time of day.", "error");
+    await createSchedule({
+      locations,
+      max_per_city: limit,
+      mode: "daily",
+      time_of_day: timeOfDay,
+      reset,
+    });
+  }
+});
+
+async function createSchedule(body) {
+  await fetch("/api/schedules", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  setSchedStatus(`Scheduled scan for ${body.locations.length} location(s).`, "ok");
+  loadSchedules();
+}
+
+function setSchedStatus(text, kind) {
+  $("#schedRunStatus").hidden = false;
+  $("#schedRunText").textContent = text;
+  $("#schedRunText").className = `console-status-text${kind ? " " + kind : ""}`;
+}
+
+async function startSchedRun(locations, limit, reset) {
+  setSchedStatus("Dispatching scan…", null);
+  const res = await fetch("/api/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ locations, limit, reset }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (data.status === "busy") {
+    setSchedStatus("A scan is already in progress.", "error");
+    return;
+  }
+  setSchedStatus("Scan started, watch progress above.", "ok");
+  updateSchedulerLive();
+}
+
+async function loadSchedules() {
+  let schedules;
+  try {
+    schedules = await getJSON("/api/schedules");
+  } catch {
+    return;
+  }
+  const wrap = $("#schedList");
+  if (!schedules.length) {
+    wrap.innerHTML = `<p class="empty-note">No scheduled scans yet.</p>`;
+    return;
+  }
+  wrap.innerHTML = schedules
+    .map((s) => {
+      const when =
+        s.mode === "once" ? `Once · ${fmtWhen(s.run_at)}` : `Daily · ${s.time_of_day}`;
+      const last = s.last_run ? ` · last run ${fmtWhen(s.last_run)}` : "";
+      return `<div class="sched-card">
+        <div>
+          <div class="sched-when">${when}</div>
+          <div class="sched-cities">${s.locations.map(escapeHTML).join(", ")}</div>
+          <div class="sched-meta">max ${s.max_per_city || "-"}/city${last}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          <span class="sched-status ${s.status}">${s.status}</span>
+          <button class="sched-del" data-id="${s.id}">delete</button>
+        </div>
+      </div>`;
+    })
+    .join("");
+  $$("#schedList .sched-del").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await fetch(`/api/schedules/${b.dataset.id}`, { method: "DELETE" });
+      loadSchedules();
+    })
+  );
+}
+
+function fmtWhen(iso) {
+  if (!iso) return "-";
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!schedulerView.hidden) closeScheduler();
+  if (!analyticsView.hidden) closeAnalytics();
+});
+
+/* ---------- analytics dashboard view ---------- */
+const analyticsView = $("#analyticsView");
+const CHART = { mint: "#7fe3c4", ember: "#ff6a3d", amber: "#f0a93b", surface: "#12181f" };
+
+async function openAnalytics() {
+  analyticsView.hidden = false;
+  document.body.style.overflow = "hidden";
+  let data;
+  try {
+    data = await getJSON("/api/analytics");
+  } catch {
+    return;
+  }
+  $("#analyticsEmpty").hidden = data.total_businesses > 0;
+
+  renderKpis(data);
+  renderDonut($("#donutGap"), [
+    { label: "has a site", value: data.with_website, color: CHART.mint },
+    { label: "no site", value: data.without_website, color: CHART.ember },
+  ]);
+  renderStackedBars(
+    $("#catBars"),
+    data.by_category.map((c) => ({
+      label: c.name,
+      withSite: c.with_website,
+      withoutSite: c.without_website,
+      total: c.count,
+    }))
+  );
+  renderBars(
+    $("#cityBars"),
+    data.by_city.map((c) => ({ label: c.city, value: c.count })),
+    CHART.amber
+  );
+  renderBars(
+    $("#issueBars"),
+    data.top_issues.map((i) => ({ label: i.label, value: i.count })),
+    CHART.ember
+  );
+}
+function closeAnalytics() {
+  analyticsView.hidden = true;
+  document.body.style.overflow = "";
+}
+$("#navDashboard").addEventListener("click", openAnalytics);
+$("#analyticsClose").addEventListener("click", closeAnalytics);
+
+function renderKpis(data) {
+  const tiles = [
+    { n: data.total_businesses, l: "businesses" },
+    { n: data.with_website, l: "with a site" },
+    { n: data.without_website, l: "no site · build" },
+    { n: data.by_city.length, l: "cities" },
+    { n: data.total_emails, l: "emails drafted" },
+  ];
+  $("#kpiRow").innerHTML = tiles
+    .map((t) => `<div class="kpi"><div class="kpi-num">${t.n}</div><div class="kpi-label">${t.l}</div></div>`)
+    .join("");
+}
+
+function renderDonut(el, segments) {
+  const total = segments.reduce((s, x) => s + x.value, 0);
+  const r = 52;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  const rings = segments
+    .map((seg) => {
+      const len = total ? (seg.value / total) * circ : 0;
+      const ring = `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${seg.color}"
+        stroke-width="15" stroke-dasharray="${len} ${circ - len}"
+        stroke-dashoffset="${-offset}" transform="rotate(-90 60 60)"></circle>`;
+      offset += len;
+      return ring;
+    })
+    .join("");
+  el.innerHTML = `
+    <svg viewBox="0 0 120 120" class="donut">
+      <circle cx="60" cy="60" r="52" fill="none" stroke="${CHART.surface}" stroke-width="15"></circle>
+      ${rings}
+      <text x="60" y="56" class="donut-num">${total}</text>
+      <text x="60" y="72" class="donut-sub">leads</text>
+    </svg>
+    <div class="donut-legend">
+      ${segments
+        .map((s) => `<span><i style="background:${s.color}"></i>${escapeHTML(s.label)} · ${s.value}</span>`)
+        .join("")}
+    </div>`;
+}
+
+function renderStackedBars(el, items) {
+  if (!items.length) {
+    el.innerHTML = `<p class="empty-note">No data.</p>`;
+    return;
+  }
+  const max = Math.max(...items.map((i) => i.total), 1);
+  el.innerHTML = items
+    .map(
+      (i) => `
+      <div class="hbar-row">
+        <span class="hbar-label">${escapeHTML(i.label)}</span>
+        <div class="hbar-track">
+          <div class="hbar-seg mint" style="width:${(i.withSite / max) * 100}%"></div>
+          <div class="hbar-seg ember" style="width:${(i.withoutSite / max) * 100}%"></div>
+        </div>
+        <span class="hbar-count">${i.total}</span>
+      </div>`
+    )
+    .join("");
+}
+
+function renderBars(el, items, color) {
+  if (!items.length) {
+    el.innerHTML = `<p class="empty-note">No data.</p>`;
+    return;
+  }
+  const max = Math.max(...items.map((i) => i.value), 1);
+  el.innerHTML = items
+    .map(
+      (i) => `
+      <div class="hbar-row">
+        <span class="hbar-label">${escapeHTML(i.label)}</span>
+        <div class="hbar-track">
+          <div class="hbar-seg" style="width:${(i.value / max) * 100}%;background:${color}"></div>
+        </div>
+        <span class="hbar-count">${i.value}</span>
+      </div>`
+    )
+    .join("");
+}
+
+/* ---------- global run watcher ---------- */
+// Detects runs the page did not start (scheduled scans, or another tab) and
+// refreshes the dashboard automatically when they finish.
+let lastWatchedStatus = null;
+async function watchRuns() {
+  let job;
+  try {
+    job = await getJSON("/api/run/status");
+  } catch {
+    return;
+  }
+  if (job.status === "running") {
+    setStatus(job.message || "scanning…", true);
+  }
+  if (lastWatchedStatus === "running" && job.status !== "running") {
+    await refreshData({ syncLocationInput: true });
+    if (!schedulerView.hidden) loadSchedules();
+  }
+  lastWatchedStatus = job.status;
+}
 
 /* ---------- boot ---------- */
 async function boot() {
@@ -410,5 +799,7 @@ async function boot() {
     setStatus("offline", false);
     renderCards();
   }
+  watchRuns();
+  setInterval(watchRuns, 6000);
 }
 boot();

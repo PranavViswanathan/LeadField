@@ -51,6 +51,21 @@ def test_run_pipeline_limit_caps_businesses(tmp_settings, fake_search) -> None:
     assert len(storage.fetch_emails(settings=tmp_settings)) == 1
 
 
+def test_run_pipeline_raises_results_per_category_to_reach_limit(
+    tmp_settings, monkeypatch
+) -> None:
+    seen: dict[str, int] = {}
+
+    def fake_search_all(settings=None):
+        seen["results_per_category"] = settings.results_per_category
+        return [make_business(name="A", url=None, search_category="restaurants")]
+
+    monkeypatch.setattr(search, "search_all", fake_search_all)
+    pipeline.run_pipeline(tmp_settings, limit=100)
+    # default is 10; a limit of 100 must bump the per-category fetch.
+    assert seen["results_per_category"] == 100
+
+
 def test_interleave_spreads_limit_across_categories() -> None:
     # 3 restaurants then 3 gyms; a limit of 2 must not be all restaurants.
     businesses = [

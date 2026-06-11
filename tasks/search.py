@@ -280,9 +280,15 @@ def _geocode_bbox(
 
 
 def _overpass_query(
-    filters: tuple[tuple[str, str], ...], bbox: tuple[float, float, float, float]
+    filters: tuple[tuple[str, str], ...],
+    bbox: tuple[float, float, float, float],
+    max_results: int = 60,
 ) -> str:
-    """Build an Overpass QL query for named nodes/ways matching the filters."""
+    """Build an Overpass QL query for named nodes/ways matching the filters.
+
+    The ``out`` cap scales with ``max_results`` so a high per-city limit can
+    actually be satisfied (bounded to keep responses reasonable).
+    """
     box = "({},{},{},{})".format(*bbox)
     lines: list[str] = []
     for key, value in filters:
@@ -290,7 +296,8 @@ def _overpass_query(
         lines.append(f'  node{selector}["name"]{box};')
         lines.append(f'  way{selector}["name"]{box};')
     body = "\n".join(lines)
-    return f"[out:json][timeout:40];\n(\n{body}\n);\nout tags center 80;"
+    cap = min(max(max_results + 20, 80), 500)
+    return f"[out:json][timeout:40];\n(\n{body}\n);\nout tags center {cap};"
 
 
 def _fetch_overpass(query: str, *, settings: Settings) -> dict:
@@ -362,7 +369,9 @@ def _search_overpass(
         logger.warning("Could not geocode location '%s'", settings.location)
         return []
 
-    query = _overpass_query(_osm_filters_for_category(category), bbox)
+    query = _overpass_query(
+        _osm_filters_for_category(category), bbox, max_results=max_results
+    )
     try:
         data = _fetch_overpass(query, settings=settings)
     except httpx.HTTPError as exc:

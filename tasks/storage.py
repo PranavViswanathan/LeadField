@@ -48,6 +48,20 @@ CREATE TABLE IF NOT EXISTS emails (
     generated_at TEXT,
     UNIQUE(business_name, business_url)
 );
+
+CREATE TABLE IF NOT EXISTS schedules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    locations TEXT NOT NULL,          -- JSON array of city strings
+    max_per_city INTEGER,
+    mode TEXT NOT NULL,               -- 'once' | 'daily'
+    run_at TEXT,                      -- ISO datetime for 'once'
+    time_of_day TEXT,                 -- 'HH:MM' for 'daily'
+    reset INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'pending',  -- pending | done | cancelled
+    last_run TEXT,
+    last_result TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
 """
 
 
@@ -145,6 +159,71 @@ def clear_all(settings: Settings | None = None) -> None:
         connection.execute("DELETE FROM emails")
         connection.execute("DELETE FROM businesses")
     logger.info("Cleared businesses and emails tables")
+
+
+def create_schedule(
+    *,
+    locations: list[str],
+    max_per_city: int | None,
+    mode: str,
+    run_at: str | None,
+    time_of_day: str | None,
+    reset: bool,
+    settings: Settings | None = None,
+) -> int:
+    """Insert a schedule row and return its id."""
+    cfg = settings or get_settings()
+    init_db(cfg)
+    with _connect(cfg.database_path) as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO schedules
+                (locations, max_per_city, mode, run_at, time_of_day, reset, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending')
+            """,
+            (
+                json.dumps(locations),
+                max_per_city,
+                mode,
+                run_at,
+                time_of_day,
+                int(reset),
+            ),
+        )
+        return int(cursor.lastrowid or 0)
+
+
+def list_schedules(settings: Settings | None = None) -> list[dict[str, object]]:
+    """Return all schedules (newest first)."""
+    cfg = settings or get_settings()
+    init_db(cfg)
+    with _connect(cfg.database_path) as connection:
+        rows = connection.execute(
+            "SELECT * FROM schedules ORDER BY created_at DESC"
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def update_schedule(
+    schedule_id: int, *, settings: Settings | None = None, **fields: object
+) -> None:
+    """Update arbitrary columns on a schedule row."""
+    if not fields:
+        return
+    cfg = settings or get_settings()
+    assignments = ", ".join(f"{column} = ?" for column in fields)
+    with _connect(cfg.database_path) as connection:
+        connection.execute(
+            f"UPDATE schedules SET {assignments} WHERE id = ?",
+            (*fields.values(), schedule_id),
+        )
+
+
+def delete_schedule(schedule_id: int, settings: Settings | None = None) -> None:
+    """Delete a schedule row."""
+    cfg = settings or get_settings()
+    with _connect(cfg.database_path) as connection:
+        connection.execute("DELETE FROM schedules WHERE id = ?", (schedule_id,))
 
 
 def fetch_emails(settings: Settings | None = None) -> list[dict[str, object]]:

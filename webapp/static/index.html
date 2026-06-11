@@ -31,6 +31,8 @@
       <a href="#gap">The Gap</a>
       <a href="#signal">Signal</a>
       <a href="#dossier">Dossier</a>
+      <button class="nav-tab ghost-tab" id="navDashboard" type="button">Dashboard</button>
+      <button class="nav-tab" id="navScheduler" type="button">Scheduler</button>
     </nav>
     <div class="nav-status" id="navStatus">
       <span class="pulse"></span><span id="navStatusText">connecting</span>
@@ -79,12 +81,7 @@
           </div>
           <div class="console-field">
             <label for="runLimit">max leads</label>
-            <select id="runLimit">
-              <option value="6">6</option>
-              <option value="12" selected>12</option>
-              <option value="20">20</option>
-              <option value="40">40</option>
-            </select>
+            <input id="runLimit" type="number" min="1" max="1000" value="12" />
           </div>
           <button class="btn" type="submit" id="runBtn">Run live scan</button>
         </div>
@@ -198,6 +195,110 @@
       </p>
     </div>
   </footer>
+
+  <!-- analytics dashboard view -->
+  <section class="analytics-view" id="analyticsView" hidden>
+    <div class="analytics-inner">
+      <header class="scheduler-head">
+        <div>
+          <span class="kicker">intelligence</span>
+          <h2>Analytics</h2>
+        </div>
+        <button class="panel-close" id="analyticsClose" aria-label="close">✕</button>
+      </header>
+
+      <div class="analytics-empty" id="analyticsEmpty" hidden>
+        <h3>No data yet.</h3>
+        <p>Run a scan to populate the charts.</p>
+      </div>
+
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <div class="charts-grid">
+        <div class="chart-card span-1">
+          <h3>Website gap</h3>
+          <div class="donut-wrap" id="donutGap"></div>
+        </div>
+        <div class="chart-card span-2">
+          <h3>Leads by category <span class="chart-legend"><i class="dot has"></i>has site <i class="dot none"></i>no site</span></h3>
+          <div class="hbars" id="catBars"></div>
+        </div>
+        <div class="chart-card span-1">
+          <h3>Leads by city</h3>
+          <div class="hbars" id="cityBars"></div>
+        </div>
+        <div class="chart-card span-2">
+          <h3>Top website issues</h3>
+          <div class="hbars" id="issueBars"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- scheduler view -->
+  <section class="scheduler-view" id="schedulerView" hidden>
+    <div class="scheduler-inner">
+      <header class="scheduler-head">
+        <div>
+          <span class="kicker">control room</span>
+          <h2>Scan scheduler</h2>
+        </div>
+        <button class="panel-close" id="schedulerClose" aria-label="close">✕</button>
+      </header>
+
+      <div class="active-scan" id="activeScan" hidden>
+        <span class="pulse"></span>
+        <div class="active-scan-body">
+          <div class="active-scan-text" id="activeScanText">scan in progress…</div>
+          <div class="console-bar"><div class="console-bar-fill" id="activeScanBar"></div></div>
+        </div>
+      </div>
+
+      <div class="sched-grid">
+        <div class="sched-config">
+          <div class="field-block">
+            <label>cities / locations</label>
+            <div class="city-input-row">
+              <input id="cityInput" placeholder="e.g. Boston, MA" autocomplete="off" />
+              <button class="btn ghost" id="addCity" type="button">add</button>
+            </div>
+            <ul class="city-list" id="cityList"></ul>
+          </div>
+
+          <div class="field-block">
+            <label for="maxPerCity">max businesses per city</label>
+            <input id="maxPerCity" type="number" min="1" max="1000" value="20" />
+            <span class="hint">no hard cap (up to 1000); larger numbers take longer</span>
+          </div>
+
+          <div class="field-block">
+            <label>when</label>
+            <div class="mode-tabs" id="modeTabs">
+              <button data-mode="now" class="mode-tab active" type="button">Run now</button>
+              <button data-mode="once" class="mode-tab" type="button">Once at…</button>
+              <button data-mode="daily" class="mode-tab" type="button">Daily at…</button>
+            </div>
+            <input id="onceAt" type="datetime-local" hidden />
+            <input id="dailyAt" type="time" hidden />
+          </div>
+
+          <label class="reset-toggle">
+            <input type="checkbox" id="resetToggle" checked /> clear previous results first
+          </label>
+
+          <button class="btn" id="schedSubmit" type="button">Run now</button>
+          <div class="console-status" id="schedRunStatus" hidden>
+            <span id="schedRunText" class="console-status-text"></span>
+          </div>
+        </div>
+
+        <div class="sched-list-wrap">
+          <h3>Scheduled scans</h3>
+          <div class="sched-list" id="schedList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- detail panel -->
   <div class="panel-overlay" id="overlay" hidden></div>

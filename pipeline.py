@@ -63,6 +63,12 @@ def run_pipeline(
     cfg = settings or get_settings()
     emit = progress or _noop
 
+    # Fetch enough per category to actually reach the requested cap. Without
+    # this, results_per_category (default 10) bounds the pool to ~10*categories,
+    # so a high limit would silently return far fewer than requested.
+    if limit is not None and limit > cfg.results_per_category:
+        cfg = cfg.model_copy(update={"results_per_category": limit})
+
     if reset:
         emit("reset", "Clearing previous results", 0, 0)
         storage.clear_all(settings=cfg)
